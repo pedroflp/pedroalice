@@ -1,0 +1,286 @@
+Crie uma aplicação web de página única (SPA) com duas telas para um casamento. O objetivo é permitir que convidados registrem e compartilhem fotos em uma timeline coletiva. O design deve transmitir intimidade, sofisticação minimalista e luxo discreto.
+
+Sistema de Design
+Paleta de Cores (Regra 60-30-10)
+
+60% — Cor dominante: Branco gelo (#F8F8F6) para backgrounds e áreas de respiro
+30% — Cor secundária: Verde oliva (#5C6B4A) para elementos de destaque, botões primários e acentos visuais
+10% — Cor de contraste: Preto (#1A1A1A) exclusivamente para tipografia
+
+Tipografia
+
+Família: Serif (sugestões: Playfair Display, Cormorant Garamond ou similar)
+Hierarquia: Títulos em peso light/regular com tracking amplo; corpo em peso regular com boa legibilidade
+Estilo: Elegante, clássico, com espaçamento generoso entre letras em títulos
+
+Princípios de Layout
+
+Espaçamentos: Generosos e respirados — mínimo de 64px entre seções, 32px entre elementos agrupados
+Bordas: Todos os elementos com border-radius: 0 (cantos retos, sem arredondamento)
+Minimalismo: Ausência de sombras, gradientes ou ornamentos desnecessários
+Luxo discreto: Transmitido através do espaço negativo, proporções equilibradas e tipografia refinada
+
+
+Tela 1: Home
+Seção 1 — Hero (100vw × 100vh)
+Container:
+
+Largura: 100vw
+Altura: 100vh
+Background: Branco gelo (#F8F8F6) sólido ou imagem sutil de textura neutra com overlay claro
+
+Conteúdo centralizado vertical e horizontalmente:
+
+Título principal:
+
+Texto: "Faça parte da nossa história"
+Tipografia: Serif, tamanho grande (clamp responsivo), peso light
+Cor: Preto (#1A1A1A)
+Alinhamento: Centro
+
+
+Subtítulo/descrição:
+
+Texto: "Registre momentos importantes com o seu celular e compartilhe na linha do tempo"
+Tipografia: Serif, tamanho médio, peso regular
+Cor: Preto (#1A1A1A) com opacidade 80%
+Alinhamento: Centro
+Largura máxima: 600px
+
+
+Container de botões (lado a lado, gap de 24px):
+Botão primário (CTA principal):
+
+Texto: "Quero registrar os momentos"
+Dimensões: Grande (padding vertical 20px, horizontal 48px)
+Background: Verde oliva (#5C6B4A)
+Texto: Branco gelo (#F8F8F6), Serif, uppercase com tracking amplo
+Border-radius: 0
+Hover: Leve escurecimento do verde
+Ação: Abre modal de cadastro de nome
+
+Botão secundário:
+
+Texto: "Ver linha do tempo de registros"
+Dimensões: Mesmo tamanho do primário
+Background: Transparente
+Borda: 1px solid Verde oliva (#5C6B4A)
+Texto: Verde oliva (#5C6B4A), Serif, uppercase com tracking amplo
+Border-radius: 0
+Ação: Navega para Tela 2 (Timeline)
+
+
+
+Modal de Cadastro
+Trigger: Clique no botão "Quero registrar os momentos"
+Estrutura:
+
+Overlay: Preto com 40% de opacidade
+Container modal: Background branco gelo, padding 48px, border-radius: 0
+Largura: max-width 420px, centralizado
+
+Conteúdo:
+
+Título: "Como devemos te chamar?" — Serif, tamanho médio, preto
+Campo de input:
+
+Placeholder: "Seu nome"
+Borda inferior apenas: 1px solid verde oliva
+Sem background visível
+Tipografia: Serif
+Border-radius: 0
+
+
+Botão de confirmação:
+
+Texto: "Confirmar"
+Estilo: Igual ao botão primário do hero
+Largura: 100%
+
+
+Botão de fechar (X) discreto no canto superior direito
+
+Comportamento pós-confirmação:
+
+Modal fecha
+Nome é salvo (localStorage ou state)
+Scroll automático suave para a Seção 2 (Upload)
+
+
+Seção 2 — Upload de Imagens
+Visibilidade: Aparece apenas após cadastro do nome (ou scroll manual)
+Container:
+
+Largura: 100%
+Padding: 80px vertical
+Background: Branco gelo
+
+Conteúdo centralizado (max-width 800px):
+
+Título da seção:
+
+Texto: "Compartilhe seus registros"
+Tipografia: Serif, tamanho grande, preto
+Margin-bottom: 48px
+
+
+Área de upload:
+
+Container com borda tracejada: 1px dashed verde oliva
+Padding interno: 64px
+Border-radius: 0
+Texto interno: "Arraste suas fotos ou clique para selecionar"
+Ícone minimalista de upload (linha fina, verde oliva)
+Input aceita múltiplos arquivos de imagem
+
+
+Grid de previews (aparece após seleção):
+
+Layout: Grid responsivo (3 colunas desktop, 2 tablet, 1 mobile)
+Gap: 16px
+Cada item contém:
+
+Thumbnail da imagem (aspect-ratio 1:1, object-fit cover)
+Barra de progresso abaixo: Altura 4px, background cinza claro, preenchimento verde oliva
+Indicador de porcentagem: Tipografia pequena, verde oliva
+Botão de remover (X discreto no canto)
+
+
+Border-radius de todos elementos: 0
+
+
+Botão de envio:
+
+Texto: "Enviar registros"
+Posição: Abaixo do grid, alinhado à direita
+Estilo: Botão primário (verde oliva, texto branco gelo)
+Estado desabilitado: Opacidade 50% quando não há arquivos
+Margin-top: 32px
+
+
+
+
+Tela 2: Timeline de Registros
+Header fixo
+
+Background: Branco gelo
+Padding: 24px 48px
+Borda inferior: 1px solid verde oliva com 20% opacidade
+
+Conteúdo:
+
+Botão à esquerda:
+
+Texto: "Quero registrar os momentos"
+Estilo: Botão primário (verde oliva)
+Ação: Navega para Home
+
+Se usuário já cadastrado: scroll direto para seção de upload
+Se não cadastrado: exibe modal de cadastro
+
+
+
+
+Título central (opcional):
+
+Texto: "Nossa linha do tempo"
+Tipografia: Serif, tamanho médio, preto
+
+
+
+Seção Timeline Horizontal
+Container:
+
+Largura: 100vw
+Altura: calc(100vh - altura do header)
+Overflow-x: scroll (scroll horizontal)
+Overflow-y: hidden
+Padding: 64px
+
+Estrutura visual:
+
+Linha horizontal central: 1px solid verde oliva, atravessando toda a extensão
+Marcadores circulares na linha para cada registro
+
+Cards de registro (dispostos horizontalmente):
+
+Ordenação: Mais recentes à esquerda, mais antigas à direita
+Gap entre cards: 48px
+Cada card contém:
+
+Preview da foto:
+
+Dimensões: 280px × 360px (proporção retrato)
+Object-fit: cover
+Border-radius: 0
+Borda sutil: 1px solid verde oliva com 30% opacidade
+
+
+Informações abaixo da foto:
+
+Nome do autor: Tipografia Serif, preto, peso medium
+Horário de captura: Tipografia Serif menor, preto com 60% opacidade
+Formato do horário: "HH:MM" ou "HH:MM — DD/MM"
+
+
+Marcador na linha do tempo:
+
+Círculo pequeno (8px) preenchido com verde oliva
+Linha vertical conectando o card ao marcador
+
+
+
+
+
+Comportamento de scroll:
+
+Scroll horizontal suave
+Indicadores visuais sutis de que há mais conteúdo (fade nas extremidades ou setas discretas)
+Scroll com mouse wheel horizontal ou drag
+
+
+Estados e Microinterações
+Transições
+
+Todas as transições: 300ms ease-out
+Hover em botões: Leve alteração de luminosidade
+Aparição de modais: Fade-in suave
+Scroll automático: smooth behavior
+
+Estados de loading
+
+Skeleton screens em branco gelo com leve pulso
+Spinners minimalistas em verde oliva (linha fina)
+
+Estados vazios
+
+Timeline vazia: Mensagem centralizada "Ainda não há registros. Seja o primeiro a compartilhar um momento."
+Tipografia: Serif, preto com 60% opacidade
+
+Responsividade
+
+Mobile: Botões empilhados verticalmente no hero; Timeline vertical ao invés de horizontal
+Tablet: Adaptações proporcionais mantendo a hierarquia visual
+Desktop: Layout conforme especificado
+
+
+Resumo de Componentes Necessários
+
+Hero Section (full viewport)
+Modal de Cadastro (com input e confirmação)
+Seção de Upload (drag-and-drop, multi-file, previews com progresso)
+Header da Timeline (com navegação)
+Timeline Horizontal (cards com foto, nome, hora, ordenação cronológica reversa)
+Botões (primário e secundário, sem border-radius)
+Cards de Preview de Upload (thumbnail + barra de progresso)
+Cards de Timeline (foto + metadados + marcador)
+
+
+Observações Finais para o Agente
+
+Priorize o espaço negativo como elemento de luxo
+Mantenha consistência absoluta no uso das três cores
+Nunca utilize border-radius em nenhum elemento
+A tipografia Serif deve estar presente em 100% dos textos
+O verde oliva aparece apenas em elementos interativos e acentos, nunca em grandes áreas
+O design deve parecer uma peça editorial de revista de casamento de alto padrão
