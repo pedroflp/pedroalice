@@ -1,46 +1,161 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useTransition } from "react";
 import { useLocation } from "wouter";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import { fetchImages, subscribeImages, getImageUrl, type ImageRow } from "@/services/images";
+import { fetchImages, subscribeImages, resolveImageUrls, getSignedUrl, type ImageRow } from "@/services/images";
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "motion/react";
+
+type ImageRowWithUrl = ImageRow & { url: string };
 
 function formatTime(d: Date) {
   const hh = `${d.getHours()}`.padStart(2, "0");
   const mm = `${d.getMinutes()}`.padStart(2, "0");
   const dd = `${d.getDate()}`.padStart(2, "0");
   const mo = `${d.getMonth() + 1}`.padStart(2, "0");
-  return `${hh}:${mm} — ${dd}/${mo}`;
+  return `${hh}:${mm} ${dd}/${mo}`;
 }
 
 function parseMoment(moment: string): Date {
   return new Date(moment);
 }
 
+// --- Lazy image: skeleton until loaded, no layout shift ---
+function LazyImage({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative w-full">
+      {!loaded && <Skeleton className={`${className} absolute inset-0`} />}
+      <img
+        src={src}
+        alt={alt}
+        className={`${className} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        loading="lazy"
+        draggable={false}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+}
+
+function SkeletonCard({ index }: { index: number }) {
+  const isOdd = index % 2 !== 0;
+  return (
+    <article
+      className="relative flex w-[75vw] md:w-[220px] shrink-0 snap-center flex-col items-center"
+      style={{ transform: `translateY(${isOdd ? "80px" : "-80px"})` }}
+    >
+      <div className={`absolute left-1/2 -translate-x-1/2 w-px bg-primary/20 h-20 z-10 ${!isOdd ? "top-full" : "bottom-full"}`} />
+      <div className={`absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary/20 z-20 ${!isOdd ? "top-[calc(100%+80px)]" : "bottom-[calc(100%+80px)]"} -translate-y-1/2`} />
+
+      {isOdd && (
+        <div className="mb-4 flex flex-col items-center gap-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      )}
+
+      <Skeleton className="h-[240px] md:h-[300px] w-full" />
+
+      {!isOdd && (
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      )}
+    </article>
+  );
+}
+
 export default function Timeline() {
   const [, setLocation] = useLocation();
-  const [guestName, setGuestName] = useState<string | null>(null);
-  const [items, setItems] = useState<ImageRow[]>([]);
+  const [items, setItems] = useState<ImageRowWithUrl[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<string | undefined>(undefined);
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem("wedding_guest_name");
-    if (saved) setGuestName(saved);
+  // Load a page of images
+  const loadPage = useCallback(async (cursor?: string) => {
+    const { rows, hasMore: more } = await fetchImages(cursor);
+    const resolved = await resolveImageUrls(rows);
+    return { resolved, hasMore: more };
   }, []);
 
-  // Fetch initial data + subscribe to realtime
+  // Initial load
   useEffect(() => {
-    fetchImages().then(setItems).catch(console.error);
-
-    const unsubscribe = subscribeImages((newRow) => {
-      setItems((prev) => {
-        // Avoid duplicates
-        if (prev.some((r) => r.id === newRow.id)) return prev;
-        return [newRow, ...prev];
+    loadPage()
+      .then(({ resolved, hasMore: more }) => {
+        startTransition(() => {
+          setItems(resolved);
+          setHasMore(more);
+          setInitialLoaded(true);
+          if (resolved.length > 0) {
+            cursorRef.current = resolved[resolved.length - 1].created_at;
+          }
+        });
+      })
+      .catch((err) => {
+        console.error(err);
+        setInitialLoaded(true);
       });
+
+    const unsubscribe = subscribeImages(async (newRow) => {
+      try {
+        const url = await getSignedUrl(newRow.storage_path);
+        startTransition(() => {
+          setItems((prev) => {
+            if (prev.some((r) => r.id === newRow.id)) return prev;
+            return [{ ...newRow, url }, ...prev];
+          });
+        });
+      } catch (err) {
+        console.error("Failed to get signed URL for new image", err);
+      }
     });
 
     return unsubscribe;
-  }, []);
+  }, [loadPage]);
+
+  // Infinite scroll: observe sentinel at the end of the list
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const scroller = scrollerRef.current;
+    if (!sentinel || !scroller) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && hasMore && !loadingMore && initialLoaded) {
+          setLoadingMore(true);
+          loadPage(cursorRef.current)
+            .then(({ resolved, hasMore: more }) => {
+              startTransition(() => {
+                setItems((prev) => {
+                  // Deduplicate
+                  const existingIds = new Set(prev.map((r) => r.id));
+                  const newItems = resolved.filter((r) => !existingIds.has(r.id));
+                  return [...prev, ...newItems];
+                });
+                setHasMore(more);
+                if (resolved.length > 0) {
+                  cursorRef.current = resolved[resolved.length - 1].created_at;
+                }
+              });
+            })
+            .catch(console.error)
+            .finally(() => setLoadingMore(false));
+        }
+      },
+      { root: scroller, rootMargin: "0px 400px 0px 0px", threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, initialLoaded, loadPage]);
 
   // Keyboard navigation for modal
   useEffect(() => {
@@ -62,9 +177,8 @@ export default function Timeline() {
     setSelectedIndex((i) => (i !== null && i > 0 ? i - 1 : i));
   }, []);
 
-  function goHomeAndRegister() {
-    if (guestName) setLocation("/?focus=upload");
-    else setLocation("/?open=name");
+  function goToUpload() {
+    setLocation("/upload");
   }
 
   function goHome() {
@@ -72,6 +186,7 @@ export default function Timeline() {
   }
 
   const selectedItem = selectedIndex !== null ? items[selectedIndex] : null;
+  const showSkeleton = !initialLoaded || isPending;
 
   return (
     <main className="min-h-screen bg-background text-foreground overflow-hidden">
@@ -79,127 +194,144 @@ export default function Timeline() {
         className="sticky top-0 z-40 border-b border-primary/20 bg-background/95 px-6 py-5 backdrop-blur-sm md:px-12"
         data-testid="header-timeline"
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="border border-transparent bg-primary px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
-              onClick={goHomeAndRegister}
-              data-testid="button-timeline-register"
-            >
-              Quero registrar os momentos
-            </button>
-            <button
-              type="button"
-              className="hidden border border-primary bg-transparent px-5 py-4 text-[11px] uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90 md:inline-flex"
-              onClick={goHome}
-              data-testid="button-timeline-home"
-            >
-              Início
-            </button>
-          </div>
-          <h1 className="text-base font-light tracking-[0.1em] uppercase" data-testid="text-timeline-title">
-            Nossa linha do tempo
+        <div className="mx-auto flex max-w-6xl items-center gap-8">
+          <button
+            type="button"
+            className="hidden border border-primary bg-transparent px-5 py-4 text-[11px] uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90 md:inline-flex"
+            onClick={goHome}
+            data-testid="button-timeline-home"
+          >
+            Início
+          </button>
+          <h1 className="text-base font-light tracking-widest uppercase" data-testid="text-timeline-title">
+            Linha do tempo
           </h1>
-          <div className="w-10 md:w-40" />
         </div>
       </header>
 
       <section className="relative h-[calc(100vh-88px)] w-full overflow-hidden" data-testid="section-timeline">
+        <button
+          type="button"
+          className="border absolute left-1/2 -translate-1/2 top-16 z-9 cursor-pointer w-max border-transparent bg-primary px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+          onClick={goToUpload}
+          data-testid="button-timeline-register"
+        >
+          Quero registrar os momentos
+        </button>
+
         {/* Linha central com gradiente nas laterais */}
-        <div
-          className="absolute top-1/2 left-0 right-0 h-px z-0"
-          style={{
-            transform: "translateY(-50%)",
-            background:
-              "linear-gradient(to right, transparent 0%, hsl(85 19% 35% / 0.3) 15%, hsl(85 19% 35% / 0.3) 85%, transparent 100%)",
-          }}
-        />
+        {items.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "100%" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2, ease: "easeOut" }}
+            className="absolute top-1/2 left-0 right-0 h-px z-1"
+            style={{
+              transform: "translateY(-50%)",
+              background:
+                "linear-gradient(to right, transparent 0%, hsl(85 19% 35% / 0.3) 15%, hsl(85 19% 35% / 0.3) 85%, transparent 100%)",
+            }}
+          />
+        )}
 
         <div
           ref={scrollerRef}
-          className="no-scrollbar h-full w-full overflow-x-auto overflow-y-hidden cursor-grab active:cursor-grabbing snap-x snap-mandatory md:snap-none"
+          className="no-scrollbar relative z-9 h-full w-full overflow-x-auto overflow-y-hidden cursor-grab active:cursor-grabbing snap-x snap-mandatory md:snap-none"
           data-testid="scroller-timeline"
         >
           <div className="relative flex min-h-full w-max items-center gap-6 md:gap-16 px-[calc(50vw-120px)] md:px-[30vw]">
-            {items.length === 0 ? (
-              <div className="w-[calc(100vw-8rem)] text-center text-sm text-foreground/60" data-testid="empty-timeline">
-                Ainda não há registros. Seja o primeiro a compartilhar um momento.
+            {showSkeleton ? (
+              <>
+                <SkeletonCard index={0} />
+                <SkeletonCard index={1} />
+                <SkeletonCard index={2} />
+              </>
+            ) : items.length === 0 ? (
+              <div className="relative flex gap-24 left-3/7 -translate-x-1/2">
+                {items.length === 0 && (
+                  <div className="absolute -translate-x-1/2 left-1/2 top-2/10 text-4xl -translate-y-1/2 text-center text-foreground/60" data-testid="empty-timeline">
+                    Faça o primeiro registro
+                  </div>
+                )}
+                <SkeletonCard index={0} />
+                <SkeletonCard index={1} />
+                <SkeletonCard index={2} />
               </div>
-            ) : null}
+            ) : (
+              <>
 
-            {items.map((it, index) => {
-              const isOdd = index % 2 !== 0;
-              const date = parseMoment(it.moment);
-              return (
-                <article
-                  key={it.id}
-                  className="relative flex w-[75vw] md:w-[220px] shrink-0 snap-center flex-col items-center"
-                  data-testid={`card-timeline-${it.id}`}
-                  style={{
-                    transform: `translateY(${isOdd ? "80px" : "-80px"})`,
-                  }}
-                >
-                  {/* Conexão com a linha: Linha vertical + Dot quadrado */}
-                  <div
-                    className={`absolute left-1/2 -translate-x-1/2 w-px bg-primary/40 h-20 z-10 ${!isOdd ? "top-full" : "bottom-full"}`}
-                  />
-                  <div
-                    className={`absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary z-20 ${!isOdd ? "top-[calc(100%+80px)]" : "bottom-[calc(100%+80px)]"} -translate-y-1/2`}
-                  />
-
-                  {/* Nome e data ACIMA para cards ímpares */}
-                  {isOdd && (
-                    <div className="mb-4 text-center" data-testid={`card-meta-${it.id}`}>
-                      <div className="text-base font-bold uppercase tracking-wider" data-testid={`text-author-${it.id}`}>
-                        {it.author}
-                      </div>
-                      <div className="mt-1 text-[10px] text-foreground/60" data-testid={`text-time-${it.id}`}>
-                        {formatTime(date)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Foto com gradiente nas bordas */}
-                  <div
-                    className="cursor-pointer w-full transition-transform duration-500 hover:scale-105"
-                    onClick={() => setSelectedIndex(index)}
-                    data-testid={`card-photo-${it.id}`}
-                  >
-                    <div
-                      className="relative w-full overflow-hidden"
+                {items.map((it, index) => {
+                  const isOdd = index % 2 !== 0;
+                  const date = parseMoment(it.moment);
+                  return (
+                    <article
+                      key={it.id}
+                      className="relative flex w-[75vw] md:w-[220px] shrink-0 snap-center flex-col items-center"
+                      data-testid={`card-timeline-${it.id}`}
                       style={{
-                        maskImage:
-                          "radial-gradient(ellipse 90% 90% at center, black 60%, transparent 100%)",
-                        WebkitMaskImage:
-                          "radial-gradient(ellipse 90% 90% at center, black 60%, transparent 100%)",
+                        transform: `translateY(${isOdd ? "80px" : "-80px"})`,
                       }}
                     >
-                      <img
-                        src={getImageUrl(it.storage_path)}
-                        alt="Registro do casamento"
-                        className="h-[240px] md:h-[300px] w-full object-contain"
-                        loading="lazy"
-                        draggable={false}
-                        data-testid={`img-timeline-${it.id}`}
+                      <div
+                        className={`absolute left-1/2 -translate-x-1/2 w-px bg-primary/40 h-20 z-10 ${!isOdd ? "top-full" : "bottom-full"}`}
                       />
-                    </div>
-                  </div>
+                      <div
+                        className={`absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary z-20 ${!isOdd ? "top-[calc(100%+80px)]" : "bottom-[calc(100%+80px)]"} -translate-y-1/2`}
+                      />
 
-                  {/* Nome e data ABAIXO para cards pares */}
-                  {!isOdd && (
-                    <div className="mt-4 text-center" data-testid={`card-meta-${it.id}`}>
-                      <div className="text-base font-bold uppercase tracking-wider" data-testid={`text-author-${it.id}`}>
-                        {it.author}
+                      {isOdd && (
+                        <div className="mb-4 text-center" data-testid={`card-meta-${it.id}`}>
+                          <div className="mt-1 text-[10px] text-foreground/60" data-testid={`text-time-${it.id}`}>
+                            {formatTime(date)}
+                          </div>
+                          <div className="text-base font-bold uppercase tracking-wider" data-testid={`text-author-${it.id}`}>
+                            {it.author}
+                          </div>
+                        </div>
+                      )}
+
+                      <div
+                        className="cursor-pointer w-full bg-accent transition-transform duration-500 hover:scale-105"
+                        onClick={() => setSelectedIndex(index)}
+                        data-testid={`card-photo-${it.id}`}
+                      >
+                        <div
+                          className="relative w-full overflow-hidden border-4 shadow-md"
+                        >
+                          <LazyImage
+                            src={it.url}
+                            alt="Registro do casamento"
+                            className="h-[240px] md:h-[300px] w-full object-cover"
+                          />
+                        </div>
                       </div>
-                      <div className="mt-1 text-[10px] text-foreground/60" data-testid={`text-time-${it.id}`}>
-                        {formatTime(date)}
-                      </div>
-                    </div>
+
+                      {!isOdd && (
+                        <div className="mt-4 text-center" data-testid={`card-meta-${it.id}`}>
+                          <div className="mt-1 text-sm text-foreground/60" data-testid={`text-time-${it.id}`}>
+                            {formatTime(date)}
+                          </div>
+                          <div className="text-xl font-bold uppercase tracking-wider" data-testid={`text-author-${it.id}`}>
+                            {it.author}
+                          </div>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+
+                {/* Sentinel for infinite scroll + loading skeletons */}
+                <div ref={sentinelRef} className="flex shrink-0 items-center gap-6 md:gap-16">
+                  {loadingMore && (
+                    <>
+                      <SkeletonCard index={items.length} />
+                      <SkeletonCard index={items.length + 1} />
+                    </>
                   )}
-                </article>
-              );
-            })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -207,10 +339,9 @@ export default function Timeline() {
       {/* Modal com prev/next e nome do autor */}
       {selectedItem && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/95 backdrop-blur-md p-4 md:p-12 animate-in fade-in duration-300"
+          className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-background/95 backdrop-blur-md p-4 md:p-12 animate-in fade-in duration-300"
           onClick={() => setSelectedIndex(null)}
         >
-          {/* Close */}
           <button
             className="absolute top-6 right-6 text-primary p-2 border border-primary hover:bg-primary hover:text-primary-foreground transition-colors z-10"
             onClick={() => setSelectedIndex(null)}
@@ -218,7 +349,6 @@ export default function Timeline() {
             <X size={24} />
           </button>
 
-          {/* Prev */}
           {selectedIndex! > 0 && (
             <button
               className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 text-primary p-2 border border-primary hover:bg-primary hover:text-primary-foreground transition-colors z-10"
@@ -231,7 +361,6 @@ export default function Timeline() {
             </button>
           )}
 
-          {/* Next */}
           {selectedIndex! < items.length - 1 && (
             <button
               className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 text-primary p-2 border border-primary hover:bg-primary hover:text-primary-foreground transition-colors z-10"
@@ -244,15 +373,13 @@ export default function Timeline() {
             </button>
           )}
 
-          {/* Photo */}
           <img
-            src={getImageUrl(selectedItem.storage_path)}
+            src={selectedItem.url}
             alt="Foto em alta resolução"
             className="max-h-[70vh] max-w-full object-contain border border-primary/20 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
 
-          {/* Author name */}
           <div className="mt-6 text-center" onClick={(e) => e.stopPropagation()}>
             <div className="text-xl font-bold uppercase tracking-wider">
               {selectedItem.author}
