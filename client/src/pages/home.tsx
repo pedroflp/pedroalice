@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { X, Upload } from "lucide-react";
+import { X, Upload, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type UploadItem = {
   id: string;
@@ -8,6 +9,12 @@ type UploadItem = {
   previewUrl: string;
   progress: number;
 };
+
+const HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=2070&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2069&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1583939003579-730e3918a45a?q=80&w=1974&auto=format&fit=crop",
+];
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -20,7 +27,9 @@ function clampName(name: string) {
 export default function Home() {
   const [, setLocation] = useLocation();
   const uploadRef = useRef<HTMLElement | null>(null);
+  const storyRef = useRef<HTMLElement | null>(null);
 
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [guestName, setGuestName] = useState<string | null>(null);
@@ -31,6 +40,11 @@ export default function Home() {
   useEffect(() => {
     const saved = window.localStorage.getItem("wedding_guest_name");
     if (saved) setGuestName(saved);
+
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -121,17 +135,65 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      {/* Top Hero with Carousel */}
+      <section className="relative h-screen w-full overflow-hidden" data-testid="section-top-hero">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentHeroIndex}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2, ease: "easeOut" }}
+            className="absolute inset-0 grayscale brightness-75"
+          >
+            <img
+              src={HERO_IMAGES[currentHeroIndex]}
+              alt="Casamento"
+              className="h-full w-full object-cover"
+            />
+          </motion.div>
+        </AnimatePresence>
+        
+        {/* Smudge/Gradient Bottom Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background pointer-events-none" />
+
+        <div className="relative z-10 flex h-full flex-col items-center justify-center text-center px-6">
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className="text-5xl font-light tracking-[0.2em] text-white md:text-8xl"
+            data-testid="text-names"
+          >
+            Pedro & Alice
+          </motion.h1>
+          
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.5 }}
+            onClick={() => storyRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            className="absolute bottom-12 flex flex-col items-center gap-2 text-white/60 hover:text-white transition-colors"
+          >
+            <span className="text-[10px] uppercase tracking-[0.3em]">Descubra</span>
+            <ChevronDown className="h-4 w-4 animate-bounce" />
+          </motion.button>
+        </div>
+      </section>
+
+      {/* Story Section */}
       <section
+        ref={storyRef}
         className="min-h-screen w-full px-6 py-16 md:px-10 md:py-24"
         data-testid="section-hero"
       >
         <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-4xl flex-col items-center justify-center text-center">
-          <h1
+          <h2
             className="text-4xl font-light leading-[1.05] tracking-[0.08em] md:text-6xl"
             data-testid="text-hero-title"
           >
             Faça parte da nossa história
-          </h1>
+          </h2>
 
           <p
             className="mt-6 max-w-[36rem] text-base leading-relaxed text-foreground/80 md:mt-8 md:text-lg"
@@ -146,7 +208,7 @@ export default function Home() {
           >
             <button
               type="button"
-              className="w-full border border-transparent bg-primary px-8 py-5 text-xs font-medium uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+              className="w-full border border-transparent bg-primary px-8 py-5 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
               onClick={openNameModal}
               data-testid="button-register-moments"
             >
@@ -155,11 +217,11 @@ export default function Home() {
 
             <button
               type="button"
-              className="w-full border border-primary bg-transparent px-8 py-5 text-xs font-medium uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+              className="w-full border border-primary bg-transparent px-8 py-5 text-xs font-bold uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
               onClick={toTimeline}
               data-testid="button-view-timeline"
             >
-              Ver linha do tempo de registros
+              Ver linha do tempo
             </button>
           </div>
         </div>
@@ -188,7 +250,7 @@ export default function Home() {
 
             <button
               type="button"
-              className="hidden border border-primary bg-transparent px-5 py-3 text-[11px] font-medium uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90 md:inline-flex"
+              className="hidden border border-primary bg-transparent px-5 py-3 text-[11px] font-bold uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90 md:inline-flex"
               onClick={openNameModal}
               data-testid="button-edit-name"
             >
@@ -277,7 +339,7 @@ export default function Home() {
                 <div className="mt-8 flex items-center justify-end gap-4">
                   <button
                     type="button"
-                    className="border border-primary bg-transparent px-6 py-4 text-[11px] font-medium uppercase tracking-[0.18em] text-primary opacity-90 transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                    className="border border-primary bg-transparent px-6 py-4 text-[11px] font-bold uppercase tracking-[0.18em] text-primary opacity-90 transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
                     onClick={() => {
                       setItems((prev) => {
                         prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
@@ -292,7 +354,7 @@ export default function Home() {
 
                   <button
                     type="button"
-                    className="border border-transparent bg-primary px-7 py-4 text-[11px] font-medium uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                    className="border border-transparent bg-primary px-7 py-4 text-[11px] font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
                     onClick={simulateUpload}
                     disabled={items.length === 0 || isUploading}
                     data-testid="button-send-records"
@@ -348,7 +410,7 @@ export default function Home() {
 
               <button
                 type="button"
-                className="mt-8 w-full border border-transparent bg-primary px-8 py-5 text-xs font-medium uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                className="mt-8 w-full border border-transparent bg-primary px-8 py-5 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
                 onClick={confirmName}
                 disabled={!canSubmitName}
                 data-testid="button-confirm-name"
