@@ -100,6 +100,14 @@ export default function UploadPage() {
           <h1 className="text-base font-light tracking-[0.1em] uppercase">
             Compartilhar registros
           </h1>
+          <button
+            type="button"
+            className="border ml-auto z-9 cursor-pointer w-max px-6 py-4 uppercase tracking-[0.18em] text-xs bg-accent text-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+            onClick={() => setLocation("/timeline")}
+            data-testid="button-upload-timeline"
+          >
+            Ver linha do tempo
+          </button>
         </div>
       </header>
 

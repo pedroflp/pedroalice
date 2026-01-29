@@ -15,6 +15,8 @@ export default function Home() {
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
+  const guestName = localStorage.getItem("pedroalice_guest_name");
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
@@ -76,16 +78,17 @@ export default function Home() {
         className="min-h-screen w-full px-6 py-16 md:px-10 md:py-24"
         data-testid="section-hero"
       >
-        <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-4xl flex-col items-center justify-center text-center">
+        <div className="mx-auto flex min-h-[calc(100vh-8rem)]  flex-col items-center justify-center text-center">
+          <h1 className="text-2xl font-light leading-[1.05] tracking-[0.08em]">Olá, {guestName}.</h1>
           <h2
             className="text-4xl font-light leading-[1.05] tracking-[0.08em] md:text-6xl"
             data-testid="text-hero-title"
           >
-            Faça parte da nossa história
+            Faça parte da nossa história!
           </h2>
 
           <p
-            className="mt-6 max-w-[36rem] text-base leading-relaxed text-foreground/80 md:mt-8 md:text-lg"
+            className="mt-6 max-w-[36rem] text-lg leading-relaxed text-foreground/80 md:mt-8 md:text-lg"
             data-testid="text-hero-subtitle"
           >
             Registre momentos importantes com o seu celular e compartilhe na linha do tempo
@@ -97,7 +100,7 @@ export default function Home() {
           >
             <button
               type="button"
-              className="w-full border border-transparent bg-primary px-8 py-5 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+              className="w-full border cursor-pointer border-transparent bg-primary px-8 py-5 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
               onClick={() => setLocation("/upload")}
               data-testid="button-register-moments"
             >
@@ -106,7 +109,7 @@ export default function Home() {
 
             <button
               type="button"
-              className="w-full border border-primary bg-transparent px-8 py-5 text-xs font-bold uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+              className="w-full border cursor-pointer border-primary bg-transparent px-8 py-5 text-xs font-bold uppercase tracking-[0.18em] text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
               onClick={() => setLocation("/timeline")}
               data-testid="button-view-timeline"
             >

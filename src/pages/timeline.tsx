@@ -206,18 +206,18 @@ export default function Timeline() {
           <h1 className="text-base font-light tracking-widest uppercase" data-testid="text-timeline-title">
             Linha do tempo
           </h1>
+          <button
+            type="button"
+            className="border ml-auto cursor-pointer w-max border-transparent bg-primary px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+            onClick={goToUpload}
+            data-testid="button-timeline-register"
+          >
+            Quero registrar os momentos
+          </button>
         </div>
       </header>
 
-      <section className="relative h-[calc(100vh-88px)] w-full overflow-hidden" data-testid="section-timeline">
-        <button
-          type="button"
-          className="border absolute left-1/2 -translate-1/2 top-16 z-9 cursor-pointer w-max border-transparent bg-primary px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
-          onClick={goToUpload}
-          data-testid="button-timeline-register"
-        >
-          Quero registrar os momentos
-        </button>
+      <section className="h-[calc(100vh-88px)] w-full overflow-hidden" data-testid="section-timeline">
 
         {/* Linha central com gradiente nas laterais */}
         {items.length > 0 && (
