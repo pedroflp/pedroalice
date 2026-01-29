@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { X, Upload, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { insertImage } from "@/services/images";
 
 type UploadItem = {
   id: string;
@@ -109,28 +110,35 @@ export default function Home() {
     });
   }
 
-  async function simulateUpload() {
-    if (items.length === 0 || isUploading) return;
+  async function handleUpload() {
+    if (items.length === 0 || isUploading || !guestName) return;
     setIsUploading(true);
 
-    const start = Date.now();
-    const durationMs = 1400;
+    const total = items.length;
+    let done = 0;
 
-    await new Promise<void>((resolve) => {
-      const tick = () => {
-        const t = Math.min(1, (Date.now() - start) / durationMs);
-        const eased = 1 - Math.pow(1 - t, 2);
-        setItems((prev) => prev.map((p) => ({ ...p, progress: Math.round(eased * 100) })));
-        if (t >= 1) resolve();
-        else requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
+    for (const item of items) {
+      try {
+        await insertImage({
+          file: item.file,
+          author: guestName,
+          moment: new Date().toISOString(),
+        });
+        done++;
+        const pct = Math.round((done / total) * 100);
+        setItems((prev) => prev.map((p) => ({ ...p, progress: pct })));
+      } catch (err) {
+        console.error("Upload failed for", item.id, err);
+      }
+    }
 
     setTimeout(() => {
       setIsUploading(false);
-      setItems((prev) => prev.map((p) => ({ ...p, progress: 100 })));
-    }, 150);
+      setItems((prev) => {
+        prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+        return [];
+      });
+    }, 600);
   }
 
   return (
@@ -355,7 +363,7 @@ export default function Home() {
                   <button
                     type="button"
                     className="border border-transparent bg-primary px-7 py-4 text-[11px] font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
-                    onClick={simulateUpload}
+                    onClick={handleUpload}
                     disabled={items.length === 0 || isUploading}
                     data-testid="button-send-records"
                   >
