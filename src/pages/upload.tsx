@@ -73,7 +73,7 @@ export default function UploadPage() {
       requestAnimationFrame(() => {
         emblaApi?.reInit();
         emblaApi?.scrollTo(next.length - 1);
-        carouselSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        carouselSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
       return next;
     });
@@ -155,30 +155,6 @@ export default function UploadPage() {
           {items.length > 0 && (
             <div className="mt-10" ref={carouselSectionRef}>
               <div className="relative">
-                <div className="mb-8 flex w-full gap-4">
-                  <button
-                    type="button"
-                    className="border border-primary bg-transparent px-6 py-4 text-[11px] font-bold uppercase tracking-[0.18em] text-primary opacity-90 transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
-                    onClick={() => {
-                      setItems((prev) => {
-                        prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-                        return [];
-                      });
-                    }}
-                    disabled={isUploading}
-                  >
-                    Limpar
-                  </button>
-
-                  <button
-                    type="button"
-                    className="border w-full border-transparent bg-primary px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
-                    onClick={handleUpload}
-                    disabled={items.length === 0 || isUploading}
-                  >
-                    {isUploading ? "Enviando..." : "Enviar registros"}
-                  </button>
-                </div>
                 <span className="text-xs text-foreground/70">Você pode capturar ou anexar mais fotos!</span>
                 <div className="overflow-hidden" ref={emblaRef}>
                   <div className="flex gap-4">
@@ -201,7 +177,7 @@ export default function UploadPage() {
                             Remover essa foto
                           </button>
                         </div>
-                        <div className="px-4 py-4">
+                        {isUploading && <div className="px-4 py-4">
                           <div className="h-1 w-full bg-foreground/10">
                             <div
                               className="h-1 bg-primary transition-[width] duration-300 ease-out"
@@ -209,7 +185,7 @@ export default function UploadPage() {
                             />
                           </div>
                           <div className="mt-2 text-xs text-primary">{it.progress}%</div>
-                        </div>
+                        </div>}
                       </div>
                     ))}
                   </div>
@@ -247,6 +223,31 @@ export default function UploadPage() {
                     aria-label={`Ir para item ${idx + 1}`}
                   />
                 ))}
+              </div>
+
+              <div className="mt-8 flex w-full gap-4">
+                <button
+                  type="button"
+                  className="border border-primary bg-transparent px-6 py-4 text-[11px] font-bold uppercase tracking-[0.18em] text-primary opacity-90 transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                  onClick={() => {
+                    setItems((prev) => {
+                      prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+                      return [];
+                    });
+                  }}
+                  disabled={isUploading}
+                >
+                  Limpar
+                </button>
+
+                <button
+                  type="button"
+                  className="border w-full border-transparent bg-primary px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                  onClick={handleUpload}
+                  disabled={items.length === 0 || isUploading}
+                >
+                  {isUploading ? "Enviando..." : "Enviar registros"}
+                </button>
               </div>
             </div>
           )}

@@ -277,7 +277,7 @@ export default function Timeline() {
                         opacity: 1,
                         y: isOdd ? 10 : -100,
                       }}
-                      transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.08 }}
+                      transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.1 }}
                     >
 
                       {isOdd && (
