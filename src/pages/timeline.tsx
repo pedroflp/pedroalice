@@ -41,7 +41,7 @@ function SkeletonCard({ index }: { index: number }) {
   const isOdd = index % 2 !== 0;
   return (
     <article
-      className="relative flex w-[75vw] md:w-[220px] shrink-0 snap-center flex-col items-center"
+      className="relative flex w-[75vw] md:w-[400px] shrink-0 snap-center flex-col items-center"
       style={{ transform: `translateY(${isOdd ? "80px" : "-80px"})` }}
     >
       <div className={`absolute left-1/2 -translate-x-1/2 w-px bg-primary/20 h-20 z-10 ${!isOdd ? "top-full" : "bottom-full"}`} />
@@ -265,27 +265,27 @@ export default function Timeline() {
                   const isOdd = index % 2 !== 0;
                   const date = parseMoment(it.moment);
                   return (
-                    <article
+                    <motion.article
                       key={it.id}
-                      className="relative flex w-[75vw] md:w-[220px] shrink-0 snap-center flex-col items-center"
+                      className="relative flex w-[75vw] md:w-[400px] shrink-0 snap-center flex-col items-center"
                       data-testid={`card-timeline-${it.id}`}
-                      style={{
-                        transform: `translateY(${isOdd ? "80px" : "-80px"})`,
+                      initial={{
+                        opacity: 0,
+                        y: isOdd ? 40 : -140,
                       }}
+                      animate={{
+                        opacity: 1,
+                        y: isOdd ? 10 : -100,
+                      }}
+                      transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.08 }}
                     >
-                      <div
-                        className={`absolute left-1/2 -translate-x-1/2 w-px bg-primary/40 h-20 z-10 ${!isOdd ? "top-full" : "bottom-full"}`}
-                      />
-                      <div
-                        className={`absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary z-20 ${!isOdd ? "top-[calc(100%+80px)]" : "bottom-[calc(100%+80px)]"} -translate-y-1/2`}
-                      />
 
                       {isOdd && (
                         <div className="mb-4 text-center" data-testid={`card-meta-${it.id}`}>
-                          <div className="mt-1 text-[10px] text-foreground/60" data-testid={`text-time-${it.id}`}>
+                          <div className="mt-1 text-sm text-foreground/60" data-testid={`text-time-${it.id}`}>
                             {formatTime(date)}
                           </div>
-                          <div className="text-base font-bold uppercase tracking-wider" data-testid={`text-author-${it.id}`}>
+                          <div className="text-xl font-bold uppercase tracking-wider text-primary" data-testid={`text-author-${it.id}`}>
                             {it.author}
                           </div>
                         </div>
@@ -312,12 +312,19 @@ export default function Timeline() {
                           <div className="mt-1 text-sm text-foreground/60" data-testid={`text-time-${it.id}`}>
                             {formatTime(date)}
                           </div>
-                          <div className="text-xl font-bold uppercase tracking-wider" data-testid={`text-author-${it.id}`}>
+                          <div className="text-xl font-bold uppercase tracking-wider text-primary" data-testid={`text-author-${it.id}`}>
                             {it.author}
                           </div>
                         </div>
                       )}
-                    </article>
+
+                      <div
+                        className={`absolute left-1/2 -translate-x-1/2 w-px bg-primary h-20 z-10 ${!isOdd ? "top-full" : "bottom-full"}`}
+                      />
+                      <div
+                        className={`absolute left-1/2 -translate-x-1/2 w-2 h-2 bg-primary z-20 ${!isOdd ? "top-[calc(100%+88px)]" : "bottom-[calc(100%+80px)]"} -translate-y-1/2`}
+                      />
+                    </motion.article>
                   );
                 })}
 
@@ -351,7 +358,7 @@ export default function Timeline() {
 
           {selectedIndex! > 0 && (
             <button
-              className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 text-primary p-2 border border-primary hover:bg-primary hover:text-primary-foreground transition-colors z-10"
+              className="absolute left-4 md:left-8 top-1/2 bg-background -translate-y-1/2 text-primary p-2 border border-primary hover:bg-primary hover:text-primary-foreground transition-colors z-10"
               onClick={(e) => {
                 e.stopPropagation();
                 goPrev();
@@ -363,7 +370,7 @@ export default function Timeline() {
 
           {selectedIndex! < items.length - 1 && (
             <button
-              className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 text-primary p-2 border border-primary hover:bg-primary hover:text-primary-foreground transition-colors z-10"
+              className="absolute right-4 md:right-8 bg-background top-1/2 -translate-y-1/2 text-primary p-2 border border-primary hover:bg-primary hover:text-primary-foreground transition-colors z-10"
               onClick={(e) => {
                 e.stopPropagation();
                 goNext();

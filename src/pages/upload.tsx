@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import { X, Upload, ArrowLeft } from "lucide-react";
+import { X, Upload, ArrowLeft, Camera, Image, ChevronLeft, ChevronRight } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
 import { insertImage } from "@/services/images";
 
 type UploadItem = {
@@ -22,6 +23,33 @@ export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+  const carouselSectionRef = useRef<HTMLDivElement>(null);
+
+  const [emblaRef, emblaApi] = useEmblaCarousel({ align: "start", loop: false });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => {
+      setSelectedIndex(emblaApi.selectedScrollSnap());
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
+    };
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    onSelect();
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi]);
+
   useEffect(() => {
     return () => {
       setItems((prev) => {
@@ -42,6 +70,11 @@ export default function UploadPage() {
         const previewUrl = URL.createObjectURL(file);
         next.push({ id, file, previewUrl, progress: 0 });
       }
+      requestAnimationFrame(() => {
+        emblaApi?.reInit();
+        emblaApi?.scrollTo(next.length - 1);
+        carouselSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
       return next;
     });
   }
@@ -111,74 +144,18 @@ export default function UploadPage() {
         </div>
       </header>
 
-      <section className="w-full px-6 py-12 md:px-10 md:py-20">
+      <section className="w-full px-6 py-12 md:px-10 md:py-20 text-center">
         <div className="mx-auto max-w-3xl">
           <p className="max-w-2xl text-sm leading-relaxed text-foreground/70 md:text-base">
-            Obrigado, {guestName}. Você pode enviar múltiplas fotos — tudo fica alinhado na nossa linha do tempo.
+            Olá, {guestName}. Você pode capturar fotos pela câmera ou enviar fotos da sua galeria! <br />
+            <b>Todas as fotos vão ficar na linha do tempo.</b>
           </p>
 
-          <div className="mt-12">
-            <label
-              className="group relative block w-full cursor-pointer border border-dashed border-primary px-8 py-16 text-center md:px-16"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
-              }}
-            >
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="sr-only"
-                onChange={(e) => {
-                  if (e.target.files) addFiles(e.target.files);
-                  e.currentTarget.value = "";
-                }}
-              />
-              <div className="mx-auto flex max-w-md flex-col items-center">
-                <Upload className="h-6 w-6 text-primary" strokeWidth={1.5} aria-hidden="true" />
-                <p className="mt-5 text-sm text-foreground/80">
-                  Arraste suas fotos ou clique para selecionar
-                </p>
-              </div>
-            </label>
 
-            {items.length > 0 && (
-              <div className="mt-10">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {items.map((it) => (
-                    <div key={it.id} className="border border-primary/30">
-                      <div className="relative aspect-square w-full overflow-hidden">
-                        <img
-                          src={it.previewUrl}
-                          alt="Prévia do upload"
-                          className="h-full w-full object-cover"
-                          draggable={false}
-                        />
-                        <button
-                          type="button"
-                          className="absolute right-3 top-3 grid h-9 w-9 place-items-center border border-primary bg-background/90 text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
-                          onClick={() => removeItem(it.id)}
-                          aria-label="Remover"
-                        >
-                          <X className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
-                        </button>
-                      </div>
-                      <div className="px-4 py-4">
-                        <div className="h-1 w-full bg-foreground/10">
-                          <div
-                            className="h-1 bg-primary transition-[width] duration-300 ease-out"
-                            style={{ width: `${it.progress}%` }}
-                          />
-                        </div>
-                        <div className="mt-2 text-xs text-primary">{it.progress}%</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 flex items-center justify-end gap-4">
+          {items.length > 0 && (
+            <div className="mt-10" ref={carouselSectionRef}>
+              <div className="relative">
+                <div className="mb-8 flex w-full gap-4">
                   <button
                     type="button"
                     className="border border-primary bg-transparent px-6 py-4 text-[11px] font-bold uppercase tracking-[0.18em] text-primary opacity-90 transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
@@ -195,15 +172,130 @@ export default function UploadPage() {
 
                   <button
                     type="button"
-                    className="border border-transparent bg-primary px-7 py-4 text-[11px] font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
+                    className="border w-full border-transparent bg-primary px-7 py-4 text-sm font-bold uppercase tracking-[0.18em] text-primary-foreground transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-50"
                     onClick={handleUpload}
                     disabled={items.length === 0 || isUploading}
                   >
                     {isUploading ? "Enviando..." : "Enviar registros"}
                   </button>
                 </div>
+                <span className="text-xs text-foreground/70">Você pode capturar ou anexar mais fotos!</span>
+                <div className="overflow-hidden" ref={emblaRef}>
+                  <div className="flex gap-4">
+                    {items.map((it) => (
+                      <div key={it.id} className="min-w-0 flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] border border-primary/30">
+                        <div className="relative aspect-square w-full overflow-hidden">
+                          <img
+                            src={it.previewUrl}
+                            alt="Prévia do upload"
+                            className="h-full w-full object-cover"
+                            draggable={false}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-3 gap-2 flex place-items-center border border-primary bg-accent p-2 text-primary transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+                            onClick={() => removeItem(it.id)}
+                            aria-label="Remover"
+                          >
+                            <X className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
+                            Remover essa foto
+                          </button>
+                        </div>
+                        <div className="px-4 py-4">
+                          <div className="h-1 w-full bg-foreground/10">
+                            <div
+                              className="h-1 bg-primary transition-[width] duration-300 ease-out"
+                              style={{ width: `${it.progress}%` }}
+                            />
+                          </div>
+                          <div className="mt-2 text-xs text-primary">{it.progress}%</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Prev / Next arrows */}
+                <button
+                  type="button"
+                  className="absolute left-2 top-1/2 grid h-10 w-10 place-items-center border border-primary bg-background/90 text-primary transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-30"
+                  onClick={scrollPrev}
+                  disabled={!canScrollPrev}
+                  aria-label="Anterior"
+                >
+                  <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 grid h-10 w-10 place-items-center border border-primary bg-background/90 text-primary transition-[filter,opacity] duration-300 ease-out hover:brightness-95 active:brightness-90 disabled:opacity-30"
+                  onClick={scrollNext}
+                  disabled={!canScrollNext}
+                  aria-label="Próximo"
+                >
+                  <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
+                </button>
               </div>
-            )}
+
+              {/* Dot indicators */}
+              <div className="mt-4 flex items-center justify-center gap-2">
+                {items.map((it, idx) => (
+                  <button
+                    key={it.id}
+                    type="button"
+                    className={`h-2.5 w-2.5 rounded-full transition-colors duration-200 ${idx === selectedIndex ? "bg-primary" : "bg-primary/30"}`}
+                    onClick={() => emblaApi?.scrollTo(idx)}
+                    aria-label={`Ir para item ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="gap-8 mt-16">
+            <button className="p-24 border w-full cursor-pointer flex flex-col place-items-center border-primary" onClick={() => inputRef.current?.click()}>
+              <Camera className="h-6 w-6 text-primary mb-4" strokeWidth={1.5} aria-hidden="true" />
+              Pressione para capturar foto com a câmera
+            </button>
+
+            <div className="mt-4">
+              <label
+                className="group relative block w-full cursor-pointer bg-accent border border-dashed border-primary px-8 py-16 text-center md:px-16"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+                }}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="sr-only"
+                  onChange={(e) => {
+                    if (e.target.files) addFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                />
+                <div className="mx-auto flex max-w-md flex-col items-center">
+                  <Image className="h-6 w-6 text-primary" strokeWidth={1.5} aria-hidden="true" />
+                  <p className="mt-5 text-sm text-foreground/80">
+                    Pressione para enviar fotos da sua galeria
+                  </p>
+                </div>
+              </label>
+
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={(e) => {
+                  if (e.target.files) addFiles(e.target.files);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </div>
           </div>
         </div>
       </section>

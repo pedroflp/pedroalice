@@ -102,7 +102,8 @@ function AuthGate() {
       <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground px-6 text-center">
         <h1 className="text-3xl font-light tracking-[0.1em]">Acesso restrito</h1>
         <p className="mt-4 max-w-md text-sm text-foreground/60 leading-relaxed">
-          Este conteúdo é exclusivo para convidados. Utilize o QR Code do convite para acessar.
+          Este conteúdo é exclusivo para convidados. <br />
+          <b>Utilize o QR Code do convite para acessar.</b>
         </p>
       </div>
     );
