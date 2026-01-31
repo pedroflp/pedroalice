@@ -253,9 +253,9 @@ export default function UploadPage() {
           )}
 
           <div className="gap-8 mt-16">
-            <button className="p-24 border w-full cursor-pointer flex flex-col place-items-center border-primary" onClick={() => inputRef.current?.click()}>
-              <Camera className="h-6 w-6 text-primary mb-4" strokeWidth={1.5} aria-hidden="true" />
-              Pressione para capturar foto com a câmera
+            <button className="p-16 border text-primary w-full cursor-pointer flex flex-col place-items-center border-primary" onClick={() => inputRef.current?.click()}>
+              <Camera className="h-8 w-8  mb-4" strokeWidth={2} aria-hidden="true" />
+              <span className="text-lg font-bold uppercase tracking-[0.08em]">Pressione para capturar foto com a câmera</span>
             </button>
 
             <div className="mt-4">
@@ -277,10 +277,10 @@ export default function UploadPage() {
                     e.currentTarget.value = "";
                   }}
                 />
-                <div className="mx-auto flex max-w-md flex-col items-center">
-                  <Image className="h-6 w-6 text-primary" strokeWidth={1.5} aria-hidden="true" />
-                  <p className="mt-5 text-sm text-foreground/80">
-                    Pressione para enviar fotos da sua galeria
+                <div className="mx-auto flex text-primary max-w-md flex-col items-center">
+                  <Image className="h-8 w-8 " strokeWidth={1.5} aria-hidden="true" />
+                  <p className="mt-5 text-md font-bold uppercase tracking-[0.08em]">
+                    Pressione para enviar foto pela galeria
                   </p>
                 </div>
               </label>

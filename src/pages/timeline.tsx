@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback, useTransition } from "react";
 import { useLocation } from "wouter";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { fetchImages, subscribeImages, resolveImageUrls, getSignedUrl, type ImageRow } from "@/services/images";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "motion/react";
+import { Button } from "@/components/ui/button";
 
 type ImageRowWithUrl = ImageRow & { url: string };
 
@@ -203,12 +204,12 @@ export default function Timeline() {
           >
             Início
           </button>
-          <h1 className="text-base font-light tracking-widest uppercase" data-testid="text-timeline-title">
+          <h1 className="text-xs font-light tracking-widest uppercase" data-testid="text-timeline-title">
             Linha do tempo
           </h1>
           <button
             type="button"
-            className="border ml-auto cursor-pointer w-max border-transparent bg-primary px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
+            className="border ml-auto cursor-pointer w-max border-transparent bg-primary px-6 py-4 text-sm font-bold uppercase tracking-[0.10em] text-primary-foreground transition-[filter] duration-300 ease-out hover:brightness-95 active:brightness-90"
             onClick={goToUpload}
             data-testid="button-timeline-register"
           >
@@ -235,6 +236,11 @@ export default function Timeline() {
           />
         )}
 
+        <Button variant="ghost" onClick={goHome} data-testid="button-timeline-register" className="m-4">
+          <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+          Voltar para o início
+        </Button>
+
         <div
           ref={scrollerRef}
           className="no-scrollbar relative z-9 h-full w-full overflow-x-auto overflow-y-hidden cursor-grab active:cursor-grabbing snap-x snap-mandatory md:snap-none"
@@ -248,15 +254,15 @@ export default function Timeline() {
                 <SkeletonCard index={2} />
               </>
             ) : items.length === 0 ? (
-              <div className="relative flex gap-24 left-3/7 -translate-x-1/2">
+              <div className="relative flex gap-24 left-1/2 -translate-x-1/2">
                 {items.length === 0 && (
                   <div className="absolute -translate-x-1/2 left-1/2 top-2/10 text-4xl -translate-y-1/2 text-center text-foreground/60" data-testid="empty-timeline">
                     Faça o primeiro registro
                   </div>
                 )}
                 <SkeletonCard index={0} />
-                <SkeletonCard index={1} />
-                <SkeletonCard index={2} />
+                {/* <SkeletonCard index={1} /> */}
+                {/* <SkeletonCard index={2} /> */}
               </div>
             ) : (
               <>
@@ -271,13 +277,13 @@ export default function Timeline() {
                       data-testid={`card-timeline-${it.id}`}
                       initial={{
                         opacity: 0,
-                        y: isOdd ? 40 : -140,
+                        y: isOdd ? -120 : -90,
                       }}
                       animate={{
                         opacity: 1,
-                        y: isOdd ? 10 : -100,
+                        y: isOdd ? -60 : -180,
                       }}
-                      transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.1 }}
+                      transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.2 }}
                     >
 
                       {isOdd && (

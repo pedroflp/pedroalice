@@ -15,4 +15,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
   },
+  server: {
+    allowedHosts: ["lattermost-scufflingly-kaiden.ngrok-free.dev"],
+  }
 });
